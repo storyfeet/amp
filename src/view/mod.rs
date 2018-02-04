@@ -29,7 +29,7 @@ use self::scrollable_region::ScrollableRegion;
 use syntect::highlighting::{Theme, ThemeSet};
 
 #[cfg(not(test))]
-use self::terminal::RustboxTerminal;
+use self::terminal::TermionTerminal;
 
 pub struct View {
     terminal: Rc<RefCell<Terminal>>,
@@ -274,7 +274,7 @@ fn build_theme_set() -> ThemeSet {
 
 #[cfg(not(test))]
 fn build_terminal() -> Rc<RefCell<Terminal>> {
-    Rc::new(RefCell::new(RustboxTerminal::new()))
+    Rc::new(RefCell::new(TermionTerminal::new()))
 }
 
 #[cfg(test)]
