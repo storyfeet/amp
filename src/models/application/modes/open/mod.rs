@@ -67,15 +67,16 @@ impl SearchSelectMode<DisplayablePath> for OpenMode {
     fn search(&mut self) {
         let results =
             if let OpenModeIndex::Complete(ref index) = self.index {
+                let (s_input,f_root)= folder_filter::split_gt(&self.input);
                 let mut s_res = index.find(
-                    &self.input.to_lowercase(),
+                    &s_input.to_lowercase(),
                     usize::max_value()// self.config.max_results replaced to shrink later (internally, it only trucates at end anyway)
                 );
                 if s_res.len() <= self.config.max_results{
                     s_res.into_iter().map(|x|DisplayablePath(PathBuf::from(x))).collect()
                 }else {
                     s_res.truncate(self.config.max_results);
-                    folder_filter::search_as_folders(s_res).unwrap_or(vec![]).into_iter().map(|x|DisplayablePath(x)).collect()
+                    folder_filter::search_as_folders(s_res,f_root).unwrap_or(vec![]).into_iter().map(|x|DisplayablePath(x)).collect()
                 }
                 
             } else {

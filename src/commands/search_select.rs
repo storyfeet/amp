@@ -143,7 +143,7 @@ pub fn pop_search_token(app: &mut Application) -> Result {
 
 pub fn step_back(app: &mut Application) -> Result {
     let result_count = match app.mode {
-        Mode::Command(ref mut mode) => mode.results().count(),
+       Mode::Command(ref mut mode) => mode.results().count(),
         Mode::Open(ref mut mode) => mode.results().count(),
         Mode::Theme(ref mut mode) => mode.results().count(),
         Mode::SymbolJump(ref mut mode) => mode.results().count(),
