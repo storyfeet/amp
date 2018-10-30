@@ -1,22 +1,36 @@
 use std::collections::BTreeMap;
 use std::path::{PathBuf,Path};
 
+#[derive(Ord,Eq,PartialOrd,PartialEq)]
 pub struct ShrinkPath<'a>{
     p:&'a Path,
     shrunk:bool,
 }
 
-impl ShrinkPath{
-    pub fn new(p:&Path)->ShrinkPath{
+impl<'a> ShrinkPath<'a>{
+    pub fn new(p:&'a Path)->ShrinkPath<'a>{
         ShrinkPath{
             p:p,
-            shrunk:false;
+            shrunk:false,
         }
     }
-    pub fn parent(&mut self)->&Path{
+
+    pub fn parent(&self)->&Path{
         let p2 = self.p.parent().unwrap_or(self.p);
-        self.p = p2;
         p2
+    }
+
+    pub fn to_parent(&mut self){
+        self.p = self.p.parent().unwrap_or(self.p);
+        self.shrunk = true;
+    }
+
+    pub fn to_buf(&self)->PathBuf{
+        let mut res = PathBuf::from(self.p);
+        if self.shrunk {
+            res.push("...");
+        }
+        res
     }
 }
 
@@ -28,20 +42,6 @@ pub fn split_gt(s:&str)->(&str,&str){
         return (&s.trim_matches('>'),s.split(' ').next().unwrap_or("").trim_matches('>'));
     }
     (s,"")
-}
-
-fn no_dot(p:&Path)->&Path{
-    if p.ends_with("..."){
-        return p.parent().expect("Ends with ..., must have parent");
-    }
-    p
-}
-fn parent_dot(mut p:&Path)->Option<PathBuf>{
-    p = no_dot(p);
-    p = p.parent()?;
-    let mut res = PathBuf::from(p);
-    res.push("...");
-    Some(res)
 }
 
 
@@ -58,20 +58,20 @@ pub fn search_as_folders<'a,IT>(it:IT,f_root:&str)->Option<Vec<PathBuf>>
 
         match common{
             None=>{
-                common = Some(PathBuf::from(v));
-                deeper.insert(PathBuf::from(v),());
+                common = Some(v);
+                deeper.insert(ShrinkPath::new(v),());
                 continue;
             },
             Some(ref mut common)=>{
-                let mut v = PathBuf::from(v);
-                while ! &v.starts_with(&common) {
-                    *common = common.parent()?.into();
+                let mut v = ShrinkPath::new(v);
+                while ! v.p.starts_with(&common) {
+                    *common = common.parent()?;
                 }
-                if v == *common {
+                if v.p == *common {
                     continue
                 }
-                while no_dot(&v).parent() != Some(&common){
-                    v = parent_dot(&v)?;
+                while v.parent() != *common{
+                    v.to_parent();
                 }
                 deeper.insert(v,());
             }
@@ -79,16 +79,17 @@ pub fn search_as_folders<'a,IT>(it:IT,f_root:&str)->Option<Vec<PathBuf>>
     }
 
     let mut d2 = BTreeMap::new();
-    if let Some(comm) = common{
-        for (mut item,_) in deeper{
-            if no_dot(&item) == &comm{
-                d2.insert(item,());
+    if let Some(ref comm) = common{
+        for (mut sv, _) in deeper{
+            if sv.p == *comm{
+                d2.insert(sv.to_buf(),());
                 continue;
             }
-            while no_dot(&item).parent() != Some(&comm){
-                item = parent_dot(&item)?;
+            while sv.parent() != *comm{
+                sv.to_parent();
             }
-            d2.insert(item,());
+
+            d2.insert(sv.to_buf(),());
         }
     }
     Some(d2.into_iter().map(|(k,_)|k).collect())
